@@ -17,14 +17,14 @@ dotenv.config();
 const db_uri = process.env.MONGOCONNECTION;
 global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
-const corsOptions = {
-  origin: 'https://sports-prediction-api.onrender.com/data/tournaments',
-  optionsSuccessStatus: 200
-}
+// const corsOptions = {
+//   origin: 'https://sports-prediction-api.onrender.com/data/tournaments',
+//   optionsSuccessStatus: 200
+// }
 
 
 app.use(express.json());
-app.use(cors(corsOptions));
+//app.use(cors(corsOptions));
 app.use("/auth", auth);
 app.use("/data", data);
 app.use("/api/rooms", room);
@@ -35,7 +35,7 @@ app.use("/api/results", results);
 
 
 app.use(function (req, res, next){
-  res.setHeader('Access-Control-Allow-Origin','http://localhost:4200');
+  res.setHeader('Access-Control-Allow-Origin','https://sports-prediction-api.onrender.com');
   res.setHeader('Access-Control-Allow-Methods','GET, POST');
   res.setHeader('Access-Control-Allow-Headers','X-Requested-With,content-type');
   res.setHeader('Access-Control-Allow-Credentials',true);

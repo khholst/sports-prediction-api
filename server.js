@@ -21,7 +21,7 @@ global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
 
 app.use(express.json());
-app.use(cors());
+//app.use(cors());
 app.use("/auth", auth);
 app.use("/data", data);
 app.use("/api/rooms", room);

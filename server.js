@@ -18,7 +18,7 @@ const db_uri = process.env.MONGOCONNECTION;
 global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
 const corsOptions = {
-  origin: 'https://sports-prediction-api.onrender.com',
+  origin: 'https://sports-prediction-api.onrender.com/data/tournaments',
   optionsSuccessStatus: 200
 }
 

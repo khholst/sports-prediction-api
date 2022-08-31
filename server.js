@@ -17,11 +17,14 @@ dotenv.config();
 const db_uri = process.env.MONGOCONNECTION;
 global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
-
+const corsOptions = {
+  origin: 'https://sports-prediction-api.onrender.com',
+  optionsSuccessStatus: 200
+}
 
 
 app.use(express.json());
-//app.use(cors());
+app.use(cors(corsOptions));
 app.use("/auth", auth);
 app.use("/data", data);
 app.use("/api/rooms", room);

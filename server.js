@@ -17,8 +17,10 @@ dotenv.config();
 const db_uri = process.env.MONGOCONNECTION;
 global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
+
 const corsOptions = {
-  origin: 'https://sports-prediction-api.onrender.com',
+  methods: 'GET, POST',
+  origin: 'http://localhost:4200',
   optionsSuccessStatus: 200
 }
 
@@ -34,12 +36,12 @@ app.use("/api/results", results);
 
 
 
-app.use(function (req, res, next){
-  res.setHeader('Access-Control-Allow-Methods','GET, POST');
-  res.setHeader('Access-Control-Allow-Headers','X-Requested-With,content-type');
-  res.setHeader('Access-Control-Allow-Credentials',true);
-next();
-})
+// app.use(function (req, res, next){
+//   res.setHeader('Access-Control-Allow-Methods','GET, POST');
+//   res.setHeader('Access-Control-Allow-Headers','X-Requested-With,content-type');
+//   res.setHeader('Access-Control-Allow-Credentials',true);
+// next();
+// })
 
 
 app.listen(process.env.PORT || 8080);

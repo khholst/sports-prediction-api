@@ -20,7 +20,7 @@ global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
 const corsOptions = {
   methods: 'GET, POST',
-  origin: 'https://khholst.github.io/sports-prediction-app',
+  origin: 'https://khholst.github.io',
   optionsSuccessStatus: 200
 }
 

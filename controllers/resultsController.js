@@ -21,8 +21,7 @@ exports.save = (async (req, res) => {
 
         const tournamentsSchema = new mongo.Schema({
             predictions: [predictionsSchema],
-            tournament_id: {type: mongo.Schema.Types.ObjectId, ref: "Tournaments"},
-            scores: Array
+            tournament_id: {type: mongo.Schema.Types.ObjectId, ref: "Tournaments"}
         });
     
         let Users = db.model('Users',
@@ -61,7 +60,6 @@ exports.save = (async (req, res) => {
                 "filter":{},
                 "update": {
                     "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 3 },
-                    "$push": {"tournaments.$[tournament].scores": {"$last": "$tournaments.$[tournament].scores"}} //Siin peaks scores arraysse n-1 + 3 punkti lisama 
                 },
                 "arrayFilters": [
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
@@ -76,7 +74,6 @@ exports.save = (async (req, res) => {
                 "filter":{},
                 "update": {
                     "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 2 },
-                    //"$push": {"tournaments.$[tournament].scores": 3} Siin peaks scores arraysse n-1 + 3 punkti lisama 
                 },
                 "arrayFilters": [
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
@@ -92,7 +89,6 @@ exports.save = (async (req, res) => {
                 "filter":{},
                 "update": {
                     "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 1 },
-                    //"$push": {"tournaments.$[tournament].scores": 3} Siin peaks scores arraysse n-1 + 3 punkti lisama 
                 },
                 "arrayFilters": [
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
@@ -107,7 +103,6 @@ exports.save = (async (req, res) => {
                 "filter":{},
                 "update": {
                     "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 0 },
-                    //"$push": {"tournaments.$[tournament].scores": 3} Siin peaks scores arraysse n-1 + 3 punkti lisama 
                 },
                 "arrayFilters": [
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },

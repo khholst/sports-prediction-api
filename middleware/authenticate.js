@@ -18,6 +18,7 @@ module.exports = (req, res, next) => {
                 ]
             })
         } else {
+            console.log(error)
             res.status(401).json({
                 code: 401,
                 errors: [

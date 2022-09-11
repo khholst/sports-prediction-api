@@ -61,18 +61,10 @@ exports.new = (async (req, res) => {
     possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points} })
     
 
-    //IF JOINED LATE, ADD AS MANY 0 SCORES TO SCORES ARRAY
-    let scores = [];
-    let i = 0;
-    // while (possiblePredictions[i].points === -1) {
-    //     scores.push(0);
-    //     i++;
-    // }
 
 
     const tournaments = {
         tournament_id: tournament,
-        scores: scores,
         predictions: possiblePredictions
     }
 
@@ -183,8 +175,7 @@ exports.join = (async (req, res) => {
             possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points, 'winner': e.winner} });
 
             const tournaments = {
-                tournament_id: tournamentID.tournament_id,
-                scores: [],
+                tournament_id: mongo.Types.ObjectId(tournamentID.tournament_id),
                 predictions: possiblePredictions
             }
     
@@ -236,7 +227,7 @@ exports.room = (async (req, res) => {
 
 exports.roomUsers = (async (req, res) => {
     const predSchema = new mongo.Schema({game_id:'ObjectID', score1:'number', score2:'number', points:'number'})
-    const subschema = new mongo.Schema({tournament_id:'ObjectID', scores:'array', predictions:[predSchema]});
+    const subschema = new mongo.Schema({tournament_id:'ObjectID', predictions:[predSchema]});
     let userRooms = db.model('Users',
         new mongo.Schema({_id:'ObjectId', username: 'string', rooms: ['ObjectId'], tournaments: [subschema]}), 'users')
     userRooms.find({"rooms": { "$elemMatch": { "$in": req.query.room.split(",")} }},function(err, data) {

@@ -66,7 +66,6 @@ exports.newGame = (async(req, res) => {
         }
 
         //Add new game to user predictions
-
         const saveGameInPredictions = await User.updateMany(
             {  },
             {

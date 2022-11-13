@@ -45,30 +45,18 @@ exports.save = (async (req, res) => {
         else if (result.score2 > result.score1) { winner = 2 }
 
         const difference = Math.abs(result.score1 - result.score2);
-        let onePointDiff = [difference];
 
-        for (let i = 1; i <= 10; i++) {
-            onePointDiff.push(difference + i);
-            onePointDiff.push(difference - i);
-        }
+
+        //let onePointDiff = [difference];
+
+        // for (let i = 1; i <= 10; i++) {
+        //     onePointDiff.push(difference + i);
+        //     onePointDiff.push(difference - i);
+        // }
 
         
 
         const savePredictionPoints = await Users.bulkWrite([
-            //Update all 3 point predictions
-            { "updateMany": {
-                "filter":{},
-                "update": {
-                    "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 3 },
-                },
-                "arrayFilters": [
-                    {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
-                    {   "prediction.game_id": mongo.Types.ObjectId(result._id),
-                        "prediction.winner": winner,
-                        "prediction.difference": {"$lte": difference + 5, "$gte": difference - 5} }                                                           
-                ]
-            }},
-
             //Update all 2 point predictions
             { "updateMany": {
                 "filter":{},
@@ -78,12 +66,28 @@ exports.save = (async (req, res) => {
                 "arrayFilters": [
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
                     {   "prediction.game_id": mongo.Types.ObjectId(result._id),
-                        "prediction.winner": winner,
-                        "prediction.difference": {"$in": [difference + 6, difference + 7, difference + 8, difference + 9, difference + 10,
-                                                        difference - 6, difference - 7, difference - 8, difference - 9, difference - 10]}
+                        "prediction.winner": winner,                        
+                        "prediction.difference": difference
                     }                                                           
                 ]
             }},
+
+            //Update all 3 point predictions
+            { "updateMany": {
+                "filter":{},
+                "update": {
+                    "$set": {"tournaments.$[tournament].predictions.$[prediction].points": 3 },
+                },
+                "arrayFilters": [
+                    {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
+                    {   "prediction.game_id": mongo.Types.ObjectId(result._id),
+                        "prediction.score1": result.score1,
+                        "prediction.score2": result.score2
+                    }                                                           
+                ]
+            }},
+
+            
             //Update all 1 point predictions
             { "updateMany": {
                 "filter":{},
@@ -94,10 +98,11 @@ exports.save = (async (req, res) => {
                     {   "tournament.tournament_id": mongo.Types.ObjectId(result.tournament_id) },
                     {   "prediction.game_id": mongo.Types.ObjectId(result._id),
                         "prediction.winner": winner,
-                        "prediction.difference": {"$nin": onePointDiff}
+                        "prediction.difference": {"$ne": difference}
                     }                                                           
                 ]
             }},
+
             //Update all 0 point predictions
             { "updateMany": {
                 "filter":{},
@@ -119,6 +124,7 @@ exports.save = (async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             code: 500,
             errors: [{

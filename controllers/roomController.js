@@ -10,73 +10,103 @@ const roomSchema = { _id: 'ObjectId', name: 'string', tournament_id: 'objectId',
 
 //Add new room to database
 exports.new = (async (req, res) => {
-    const { name, tournament } = req.body;
+    try {
+        const { name, tournament } = req.body;
 
-    const errors = validationResult(req);
-    if(!errors.isEmpty()) {
-        return res.status(200).json({
-            "code": 400,
-            "errors": errors.array()
+        const errors = validationResult(req);
+        if(!errors.isEmpty()) {
+            return res.status(200).json({
+                "code": 400,
+                "errors": errors.array()
+            });
+        }
+
+        const joinKey = uuidv4(); //Generate random join key for the room
+
+        //Decode payload from the JWT token
+        const jwtPayload = req.get("token").split(".")[1];
+        const username = JSON.parse(Buffer.from(jwtPayload, "base64").toString("utf-8")).username;
+
+        //Schema for rooms collection
+        const Rooms = db.model('Rooms', 
+        new mongo.Schema({ name: 'string', tournament_id: 'objectId', creator: 'string', join_key: 'string'}), 
+        'rooms');
+
+        //Construct room object to be added to the database
+        const newRoom = {
+            tournament_id: tournament,
+            name: name,
+            creator: username,
+            join_key: joinKey
+        }
+
+    const createdRoom = await Rooms.create(newRoom);
+        //Schema for users collection
+        const Users = db.model('Users', new mongo.Schema(userSchema), 'users');
+
+
+        //Check if user already is in this tournament
+        const creatingUser = await Users.findOne({username: username}, {tournaments: 1});
+
+        const userInTournament = checkUserIsInTournament(creatingUser, tournament);
+
+        if (userInTournament) {
+            const user = await Users.findOneAndUpdate({ username: username },
+                { $push: { rooms: createdRoom._id }});
+
+            return res.status(201).json({
+                code: 201,
+                join_key: joinKey,
+                room_id: createdRoom._id
+            })
+        }
+
+
+
+
+
+        const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
+
+
+        let possiblePredictions = await games.find({tournament_id: mongo.Types.ObjectId(tournament)})
+                                                .select({"_id": 1, "time": 1});
+
+        possiblePredictions.forEach((e) => {
+            e.score1 = -1,
+            e.score2 = -1,
+            e.points = (new Date(e.time).getTime() > new Date().getTime()) ? -999:-1 //-999: game not started; -1: game not predicted
+        })
+
+        possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points} })
+        
+
+
+
+        const tournaments = {
+            tournament_id: mongo.Types.ObjectId(tournament),
+            predictions: possiblePredictions
+        }
+
+        const user = await Users.findOneAndUpdate({ username: username },
+            { $push: { rooms: createdRoom._id, tournaments: tournaments }});
+
+
+        return res.status(201).json({
+            code: 201,
+            join_key: joinKey,
+            room_id: createdRoom._id
+        })
+    } catch(error) {
+        console.log(error)
+        return res.status(404).json({
+            code: 404,
+            errors: [
+                {
+                    msg: "Something went wrong, the room could not be created"
+                }
+            ]
         });
     }
-
-    const joinKey = uuidv4(); //Generate random join key for the room
-
-    //Decode payload from the JWT token
-    const jwtPayload = req.get("token").split(".")[1];
-    const username = JSON.parse(Buffer.from(jwtPayload, "base64").toString("utf-8")).username;
-
-    //Schema for rooms collection
-    const Rooms = db.model('Rooms', 
-    new mongo.Schema({ name: 'string', tournament_id: 'objectId', creator: 'string', join_key: 'string'}), 
-    'rooms');
-
-    //Construct room object to be added to the database
-    const newRoom = {
-        tournament_id: tournament,
-        name: name,
-        creator: username,
-        join_key: joinKey
-    }
-
-   const createdRoom = await Rooms.create(newRoom);
-    //Schema for users collection
-    const Users = db.model('Users', new mongo.Schema(userSchema), 'users');
-
-    const room = createdRoom._id
-
-
-    const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
-
-
-    let possiblePredictions = await games.find({tournament_id: mongo.Types.ObjectId(tournament)})
-                                            .select({"_id": 1, "time": 1});
-
-    possiblePredictions.forEach((e) => {
-        e.score1 = -1,
-        e.score2 = -1,
-        e.points = (new Date(e.time).getTime() > new Date().getTime()) ? -999:-1 //-999: game not started; -1: game not predicted
-    })
-
-    possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points} })
-    
-
-
-
-    const tournaments = {
-        tournament_id: tournament,
-        predictions: possiblePredictions
-    }
-
-    const user = await Users.findOneAndUpdate({ username: username },
-        { $push: { rooms: room, tournaments: tournaments }});
-
-
-    return res.status(201).json({
-        code: 201,
-        join_key: joinKey,
-        room_id: createdRoom._id
-    })
 })
 
 
@@ -144,25 +174,15 @@ exports.join = (async (req, res) => {
         })
 
     } else {
-        const tournamentID = await Rooms.findOne({_id: roomID}, {tournament_id: 1, _id: 0});
-        let userInTournament = false;
+        const room = await Rooms.findOne({_id: roomID}, {tournament_id: 1, _id: 0});
+        const userInTournament = checkUserIsInTournament(user, room.tournament_id);
 
-        user.tournaments.forEach(element => {
-            console.log(element.tournament_id)
-            console.log(tournamentID.tournament_id)
-            if(element.tournament_id.equals(tournamentID.tournament_id)) {
-                userInTournament = true;
-            }
-        })
-        console.log(userInTournament)
 
-        let possiblePredictions = [];
         if (!userInTournament) {
-            //IF USER IS ALREADY IN THIS TOURNAMENT
             const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
 
-
-            possiblePredictions = await games.find({tournament_id: tournamentID.tournament_id})
+            //THIS TO COMMON FUNCTION
+            possiblePredictions = await games.find({tournament_id: room.tournament_id})
                                                     .select({"_id": 1, "time": 1});
 
             possiblePredictions.forEach((e) => {
@@ -172,10 +192,12 @@ exports.join = (async (req, res) => {
                 e.winner = -1
             })
 
-            possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points, 'winner': e.winner} });
+            possiblePredictions = possiblePredictions.map((e) => { 
+                return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points, 'winner': e.winner} 
+            });
 
             const tournaments = {
-                tournament_id: mongo.Types.ObjectId(tournamentID.tournament_id),
+                tournament_id: mongo.Types.ObjectId(room.tournament_id),
                 predictions: possiblePredictions
             }
     
@@ -204,9 +226,7 @@ exports.all = (async (req, res) => {
       roomIds.push(room);
     };
 
-    const rooms = db.model('Rooms',
-    new mongo.Schema(roomSchema), 'rooms');
-
+    const rooms = db.model('Rooms', new mongo.Schema(roomSchema), 'rooms');
     const roomData = await rooms.find({"_id" : { "$in": roomIds }});
 
     res.status(200).json(roomData);
@@ -229,7 +249,9 @@ exports.roomUsers = (async (req, res) => {
     const predSchema = new mongo.Schema({game_id:'ObjectID', score1:'number', score2:'number', points:'number'})
     const subschema = new mongo.Schema({tournament_id:'ObjectID', predictions:[predSchema]});
     let userRooms = db.model('Users',
-        new mongo.Schema({_id:'ObjectId', username: 'string', rooms: ['ObjectId'], tournaments: [subschema]}), 'users')
+        new mongo.Schema({_id:'ObjectId', username: 'string', rooms: ['ObjectId'], tournaments: [subschema]}), 'users');
+    
+
     userRooms.find({"rooms": { "$elemMatch": { "$in": req.query.room.split(",")} }},function(err, data) {
         if(err){console.log(err);}
         else{
@@ -249,3 +271,16 @@ exports.roomUsers = (async (req, res) => {
         };
     });
 })
+
+
+function checkUserIsInTournament(user, tournament_id) {
+    let userIsInTournament = false;
+
+    user.tournaments.forEach(element => {
+        if(element.tournament_id.equals(mongo.Types.ObjectId(tournament_id))) {
+            userIsInTournament = true;
+        }
+    });
+    
+    return userIsInTournament;
+}

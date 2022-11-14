@@ -19,7 +19,7 @@ global.db = (global.db ? global.db : mongo.createConnection(db_uri));
 
 const corsOptions = {
   methods: 'GET, POST',
-  origin: 'https://khholst.github.io/',
+  origin: 'https://khholst.github.io',
   //origin: 'http://localhost:4200',
   optionsSuccessStatus: 200
 }

@@ -3,14 +3,12 @@ const { check } = require("express-validator");
 const authController = require("../controllers/authController");
 
 
-//Route for logging in
 router.post("/register", [
     check("username", "Please provide a valid username").notEmpty(),
     check("username", "Username has to be at least 8 characters").isLength({min:8}),
     check("password", "Password has to be at least 8 characters").isLength({min: 8})
 ], authController.register);
 
-//Route for registering
 router.post("/login", authController.login);
 
 

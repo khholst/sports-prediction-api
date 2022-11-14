@@ -3,18 +3,9 @@ const JWT = require("jsonwebtoken");
 const mongo = require("mongoose");
 
 
-
 exports.register = (async(req, res) => {
     const { username, password, confirmPassword } = req.body;
 
-    //Check for any validation errors
-    const errors = validationResult(req);
-    if(!errors.isEmpty()) {
-        return res.status(200).json({
-            "code":400,
-            "errors": errors.array()
-        });
-    }
 
     //Check if password matches confirm password
     if (password != confirmPassword) {

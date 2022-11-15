@@ -3,10 +3,14 @@ const mongo = require("mongoose");
 
 router.get("/tournaments", async(req, res) => {
     let tours = db.model('Tournaments', 
-        new mongo.Schema({ name: 'string', _id:'ObjectId' }), 'tournaments'); 
+        new mongo.Schema({ name: 'string', _id:'ObjectId', end_date: 'date' }), 'tournaments'); 
     tours.find(req.query, function(err, data) { 
-        if(err){console.log(err);}
-        else{res.json(data);}; 
+        if (err) {
+            console.log(err);
+        }
+        else {
+            res.json(data);
+        }; 
     });
 });
 

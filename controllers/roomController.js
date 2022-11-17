@@ -5,6 +5,7 @@ const mongo = require("mongoose");
 
 const userSchema = {username: 'string', password: 'string', rooms: 'array', tournaments: 'array', is_admin: 'boolean',  _id:'ObjectId'};
 const gamesSchema = {team1: 'string', team2: 'string', score1: 'number', score2: 'number', time: 'date', tournament_id: 'ObjectID',  _id:'ObjectID'};
+const specialPredictionsSchema = {prediction: 'string', result: 'string', end_date: 'date', tournament_id: 'ObjectID',  _id:'ObjectID', user_prediction: 'string'};
 const tournamentSchema = {_id: 'ObjectId', start_date: 'string', end_date: 'string',  name: 'string', img_url: 'string', sport: 'string'};
 const roomSchema = { _id: 'ObjectId', name: 'string', tournament_id: 'objectId', creator: 'string', join_key: 'string'};
 
@@ -41,35 +42,41 @@ exports.new = (async (req, res) => {
         }
 
     const createdRoom = await Rooms.create(newRoom);
-        //Schema for users collection
-        const Users = db.model('Users', new mongo.Schema(userSchema), 'users');
+    //Schema for users collection
+    const Users = db.model('Users', new mongo.Schema(userSchema), 'users');
 
 
-        //Check if user already is in this tournament
-        const creatingUser = await Users.findOne({username: username}, {tournaments: 1});
+    //Check if user already is in this tournament
+    const creatingUser = await Users.findOne({username: username}, {tournaments: 1});
 
-        const userInTournament = checkUserIsInTournament(creatingUser, tournament);
+    const userInTournament = checkUserIsInTournament(creatingUser, tournament);
 
-        if (userInTournament) {
-            const user = await Users.findOneAndUpdate({ username: username },
-                { $push: { rooms: createdRoom._id }});
+    if (userInTournament) {
+        const user = await Users.findOneAndUpdate({ username: username },
+            { $push: { rooms: createdRoom._id }});
 
-            return res.status(201).json({
-                code: 201,
-                join_key: joinKey,
-                room_id: createdRoom._id
-            })
-        }
+        return res.status(201).json({
+            code: 201,
+            join_key: joinKey,
+            room_id: createdRoom._id
+        })
+    }
 
 
 
 
 
         const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
+        const specials = db.model('Specials', new mongo.Schema(specialPredictionsSchema), 'specials')
 
 
         let possiblePredictions = await games.find({tournament_id: mongo.Types.ObjectId(tournament)})
                                                 .select({"_id": 1, "time": 1});
+        const specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(tournament)})
+        specialPredictions.forEach((e) => {
+            e.user_prediction = "None"
+        })
+
 
         possiblePredictions.forEach((e) => {
             e.score1 = -1,
@@ -80,11 +87,10 @@ exports.new = (async (req, res) => {
         possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points} })
         
 
-
-
         const tournaments = {
             tournament_id: mongo.Types.ObjectId(tournament),
-            predictions: possiblePredictions
+            predictions: possiblePredictions,
+            special_predictions: specialPredictions
         }
 
         const user = await Users.findOneAndUpdate({ username: username },
@@ -180,10 +186,16 @@ exports.join = (async (req, res) => {
 
         if (!userInTournament) {
             const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
+            const specials = db.model('Specials', new mongo.Schema(specialPredictionsSchema), 'specials')
 
             //THIS TO COMMON FUNCTION
-            possiblePredictions = await games.find({tournament_id: room.tournament_id})
+            let possiblePredictions = await games.find({tournament_id: room.tournament_id})
                                                     .select({"_id": 1, "time": 1});
+
+            let specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(room.tournament_id)})
+            specialPredictions.forEach((e) => {
+                e.user_prediction = "None"
+            })
 
             possiblePredictions.forEach((e) => {
                 e.score1 = -1,
@@ -198,7 +210,8 @@ exports.join = (async (req, res) => {
 
             const tournaments = {
                 tournament_id: mongo.Types.ObjectId(room.tournament_id),
-                predictions: possiblePredictions
+                predictions: possiblePredictions,
+                special_predictions: specialPredictions
             }
     
             const userUpdate = await user.updateOne({$push: {rooms: roomID, tournaments: tournaments}})

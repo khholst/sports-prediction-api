@@ -132,5 +132,48 @@ exports.new = (async (req, res) => {
         console.log(error)
         res.status(400).json({})
     }
+})
 
+
+exports.newSpecial = (async (req, res) => {
+    const prediction = req.body;
+    const username = res.locals.decodedToken.username;
+
+    const predictionsSchema = new mongo.Schema({
+        _id: mongo.Schema.ObjectId,
+        end_date: Date,
+        prediction: String,
+        tournament_id: mongo.Schema.ObjectId,
+        result: String,
+        user_prediction: String
+    })
+
+    const tournamentsSchema = new mongo.Schema({
+        special_predictions: [predictionsSchema],
+        tournament_id: {type: mongo.Schema.Types.ObjectId, ref: "Tournaments"}
+    })
+
+    const Users = db.model('Users',
+    new mongo.Schema({username: 'string', password: 'string', rooms: 'array', tournaments: [tournamentsSchema], is_admin: 'boolean',  _id:'ObjectId'}), 'users');
+
+    try {
+        const savePrediction = await Users.updateOne(
+            { "username": username },
+            {
+                "$set": {
+                    "tournaments.$[tournament].special_predictions.$[special].user_prediction": prediction.user_prediction, 
+                },
+            },
+            { "arrayFilters": [
+                { "tournament.tournament_id": mongo.Types.ObjectId(prediction.tournament_id) },
+                { "special._id": mongo.Types.ObjectId(prediction._id) }
+        ]})
+    } catch(error) {
+        console.log(error);
+        res.status(400).json({})
+    }
+
+    res.status(200).json({
+        msg: "Prediction saved"
+    })
 })

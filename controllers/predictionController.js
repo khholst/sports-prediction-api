@@ -37,7 +37,7 @@ exports.all = (async(req, res) => {
     try {
         const userPredictions = await User.findOne({username: username}, {username: 0, password: 0, is_admin: 0, _id: 0, rooms: 0, __v: 0})
                               .populate("tournaments.predictions.game_id", "-tournament_id")
-                              .populate("tournaments.tournament_id", "-start_date -end_date -img_url -sport -_id");
+                              .populate("tournaments.tournament_id", "-start_date -end_date -img_url -sport");
 
         res.status(200).json({
             predictions: userPredictions.tournaments
@@ -176,4 +176,82 @@ exports.newSpecial = (async (req, res) => {
     res.status(200).json({
         msg: "Prediction saved"
     })
+})
+
+
+exports.friendsPredictions = (async (req, res) => {
+    const prediction = req.body;
+    const username = res.locals.decodedToken.username;
+
+    const predictionsSchema = new mongo.Schema({
+        game_id: {
+            type: mongo.Schema.ObjectId,
+            ref: "Games"
+        },
+        score1: Number,
+        score2: Number,
+        points: Number
+    })
+    const specialPredictionsSchema = new mongo.Schema({
+        _id: mongo.Schema.ObjectId,
+        end_date: Date,
+        prediction: String,
+        tournament_id: mongo.Schema.ObjectId,
+        result: String,
+        user_prediction: String
+    })
+
+    const tournamentsSchema = new mongo.Schema({
+        predictions: [predictionsSchema],
+        special_predictions: [specialPredictionsSchema],
+        tournament_id: {type: mongo.Schema.Types.ObjectId, ref: "Tournaments"}
+    })
+
+    let User = db.model('Users',
+    new mongo.Schema({username: 'string', password: 'string', rooms: 'array', tournaments: [tournamentsSchema], is_admin: 'boolean',  _id:'ObjectId'}), 'users');
+
+
+
+
+    try {
+        const userRooms = await User.findOne({"username": username}, {rooms: 1});
+        const friends = await User.find({ "username": {"$ne" : username}, "rooms": { "$elemMatch": { "$in": userRooms.rooms }}}, {username: 1, tournaments: 1});
+
+        let predictionsKey = "";
+        let idField = "";
+        if (prediction.type === "special") { predictionsKey = "special_predictions"; idField = "_id"; }
+        else if (prediction.type === "game") { predictionsKey = "predictions"; idField="game_id"; }
+        let friendsPredictions = [];
+
+        for (let i = 0; i < friends.length; i++) {
+            for (let j = 0; j < friends[i].tournaments.length; j++) {
+                if (mongo.Types.ObjectId(friends[i].tournaments[j].tournament_id).equals(mongo.Types.ObjectId(prediction.tournament_id))) {
+                    for (let k = 0; k < friends[i].tournaments[j][predictionsKey].length; k++) {
+                        if (mongo.Types.ObjectId(friends[i].tournaments[j][predictionsKey][k][idField]).equals(mongo.Types.ObjectId(prediction.prediction_id))) {
+                            const predictionEntry = friends[i].tournaments[j][predictionsKey][k];
+                            if (prediction.type === "special") {
+                                if (predictionEntry.user_prediction != "None") {
+                                    friendsPredictions.push({username: friends[i].username, prediction: predictionEntry.user_prediction})
+                                }
+                            } else if (prediction.type === "game") {
+                                if (predictionEntry.score1 >= 0) {
+                                    if (predictionEntry.points >= 0) {
+                                        friendsPredictions.push({username: friends[i].username, prediction: `${predictionEntry.score1} : ${predictionEntry.score2}`, points: predictionEntry.points})
+                                    } else {
+                                        friendsPredictions.push({username: friends[i].username, prediction: `${predictionEntry.score1} : ${predictionEntry.score2}`})
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        res.status(200).send(friendsPredictions)
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({})
+    }
+
 })

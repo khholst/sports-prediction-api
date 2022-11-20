@@ -5,6 +5,7 @@ const router = require("express").Router();
 router.get("/", authenticate, predictionController.all);
 router.post("/new", authenticate, predictionController.new);
 router.post("/new-special", authenticate, predictionController.newSpecial);
+router.post("/friends-predictions", authenticate, predictionController.friendsPredictions);
 
 
 

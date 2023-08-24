@@ -5,9 +5,35 @@ const mongo = require("mongoose");
 
 const userSchema = {username: 'string', password: 'string', rooms: 'array', tournaments: 'array', is_admin: 'boolean',  _id:'ObjectId'};
 const gamesSchema = {team1: 'string', team2: 'string', score1: 'number', score2: 'number', time: 'date', tournament_id: 'ObjectID',  _id:'ObjectID'};
-const specialPredictionsSchema = {prediction: 'string', result: 'string', end_date: 'date', tournament_id: 'ObjectID',  _id:'ObjectID', user_prediction: 'string'};
+const specialPredictionsSchema = {prediction: 'string', result: 'string', end_date: 'date', tournament_id: 'ObjectID',  _id:'ObjectID'};
 const tournamentSchema = {_id: 'ObjectId', start_date: 'string', end_date: 'string',  name: 'string', img_url: 'string', sport: 'string'};
 const roomSchema = { _id: 'ObjectId', name: 'string', tournament_id: 'objectId', creator: 'string', join_key: 'string'};
+
+
+
+
+async function addPredictionForUsers(userCollection, prediction, tournament_id, special=false) {
+    let subdocument = "predictions";
+    if (special) { subdocument = "special_predictions" }
+    push_location = `tournaments.$[tournament].${subdocument}`
+
+    await userCollection.updateMany({},
+        {
+            "$push": {
+                [push_location]: prediction, 
+            },
+        },
+        { "arrayFilters": [
+            { "tournament.tournament_id": mongo.Types.ObjectId(tournament_id) },
+        ]}
+    )
+}
+
+
+
+
+
+
 
 //Add new room to database
 exports.new = (async (req, res) => {
@@ -69,22 +95,33 @@ exports.new = (async (req, res) => {
         const games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
         const specials = db.model('Specials', new mongo.Schema(specialPredictionsSchema), 'specials')
 
+        let possiblePredictions = await games.find({tournament_id: mongo.Types.ObjectId(tournament)}).select({"_id": 1, "time": 1});
 
-        let possiblePredictions = await games.find({tournament_id: mongo.Types.ObjectId(tournament)})
-                                                .select({"_id": 1, "time": 1});
-        const specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(tournament)})
-        specialPredictions.forEach((e) => {
-            e.user_prediction = "None"
+        // SPECIAL
+        let specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(tournament)}).select("_id")
+        specialPredictions = specialPredictions.map((e) => { 
+            return {
+                'prediction_id': e._id,
+                'user_prediction': "None",
+                "user_points": -999
+            } 
+        });
+
+
+        // possiblePredictions.forEach((e) => {
+        //     e.score1 = -1,
+        //     e.score2 = -1,
+        //     e.points = (new Date(e.time).getTime() > new Date().getTime()) ? -999:-1 //-999: game not started; -1: game not predicted
+        // })
+
+        possiblePredictions = possiblePredictions.map((e) => { 
+            return {
+                'game_id': e._id,
+                'score1': -1,
+                'score2': -1,
+                'points': -999
+            } 
         })
-
-
-        possiblePredictions.forEach((e) => {
-            e.score1 = -1,
-            e.score2 = -1,
-            e.points = (new Date(e.time).getTime() > new Date().getTime()) ? -999:-1 //-999: game not started; -1: game not predicted
-        })
-
-        possiblePredictions = possiblePredictions.map((e) => { return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points} })
         
 
         const tournaments = {
@@ -104,8 +141,8 @@ exports.new = (async (req, res) => {
         })
     } catch(error) {
         console.log(error)
-        return res.status(404).json({
-            code: 404,
+        return res.status(500).json({
+            code: 500,
             errors: [
                 {
                     msg: "Something went wrong, the room could not be created"
@@ -189,23 +226,26 @@ exports.join = (async (req, res) => {
             const specials = db.model('Specials', new mongo.Schema(specialPredictionsSchema), 'specials')
 
             //THIS TO COMMON FUNCTION
-            let possiblePredictions = await games.find({tournament_id: room.tournament_id})
-                                                    .select({"_id": 1, "time": 1});
+            let possiblePredictions = await games.find({tournament_id: room.tournament_id}).select({"_id": 1, "time": 1});
 
-            let specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(room.tournament_id)})
-            specialPredictions.forEach((e) => {
-                e.user_prediction = "None"
-            })
+            let specialPredictions = await specials.find({tournament_id: mongo.Types.ObjectId(room.tournament_id)}).select("_id")
 
-            possiblePredictions.forEach((e) => {
-                e.score1 = -1,
-                e.score2 = -1,
-                e.points = (new Date(e.time).getTime() > new Date().getTime()) ? -999 : -1 //-999: game not started; -1: game started but not predicted
-                e.winner = -1
-            })
+            specialPredictions = specialPredictions.map((e) => { 
+                return {
+                    'prediction_id': e._id,
+                    'user_prediction': "None",
+                    "user_points": -999
+                } 
+            });
 
             possiblePredictions = possiblePredictions.map((e) => { 
-                return {'game_id': e._id, 'score1': e.score1, 'score2': e.score2, 'points': e.points, 'winner': e.winner} 
+                return {
+                    'game_id': e._id,
+                    'score1': -1,
+                    'score2': -1, 
+                    'points': (new Date(e.time).getTime() > new Date().getTime()) ? -999 : -1, //-999: game not started; -1: game started but not predicted
+                    'winner': e.winner
+                } 
             });
 
             const tournaments = {

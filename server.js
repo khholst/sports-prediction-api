@@ -9,6 +9,7 @@ const room = require("./routes/room");
 const admin = require("./routes/admin");
 const predictions = require("./routes/predictions");
 const results = require("./routes/results");
+const random = require("./routes/random");
 
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/rooms", room);
 app.use("/api/predictions", predictions);
 app.use("/api/admin", admin);
 app.use("/api/results", results);
+app.use("/api/random", random);
 
 
 

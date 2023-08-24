@@ -1,15 +1,21 @@
 const mongo = require("mongoose");
 
 const gamesSchema = {team1: 'string', team2: 'string', score1: 'number', score2: 'number', time: 'date', tournament_id: 'ObjectID',  _id:'ObjectID'};
+const specialSchema = {
+    tournament_id   : 'ObjectID',
+    prediction      : 'string',
+    description     : 'string',
+    points          : 'number',
+    type            : 'string',
+    result          : 'string'
+}
 const tournamentSchema = {_id: 'ObjectId', start_date: 'string', end_date: 'string',  name: 'string', img_url: 'string', sport: 'string'};
 
 
 exports.all = (async(req, res) => {
 
-    let Games = db.model('Games',
-    new mongo.Schema(gamesSchema), 'games');
-
-
+    const Games = db.model('Games', new mongo.Schema(gamesSchema), 'games');
+    const Specials = db.model('Specials', new mongo.Schema(specialSchema), 'specials');
     const dbTournaments = db.model('Tournaments', new mongo.Schema(tournamentSchema), 'tournaments');
 
 
@@ -23,8 +29,18 @@ exports.all = (async(req, res) => {
         points: Number
     })
 
+    const specialPredictionsSchema = new mongo.Schema({
+        prediction_id: {
+            type: mongo.Schema.ObjectId,
+            ref: "Specials"
+        },
+        user_prediction: String,
+        user_points: Number,
+    })
+
     const tournamentsSchema = new mongo.Schema({
         predictions: [predictionsSchema],
+        special_predictions: [specialPredictionsSchema],
         tournament_id: {type: mongo.Schema.Types.ObjectId, ref: "Tournaments"}
     })
 
@@ -37,7 +53,8 @@ exports.all = (async(req, res) => {
     try {
         const userPredictions = await User.findOne({username: username}, {username: 0, password: 0, is_admin: 0, _id: 0, rooms: 0, __v: 0})
                               .populate("tournaments.predictions.game_id", "-tournament_id")
-                              .populate("tournaments.tournament_id", "-start_date -end_date -img_url -sport");
+                              .populate("tournaments.special_predictions.prediction_id")
+                              .populate("tournaments.tournament_id", "-end_date -img_url -sport");
 
         res.status(200).json({
             predictions: userPredictions.tournaments
@@ -81,8 +98,6 @@ exports.new = (async (req, res) => {
         new mongo.Schema({username: 'string', password: 'string', rooms: 'array', tournaments: [tournamentsSchema], is_admin: 'boolean',  _id:'ObjectId'}), 'users');
 
         const game = await Games.findOne({_id: prediction.game_id});
-
-
         const username = res.locals.decodedToken.username;
 
         //Check if user has already made this prediction
@@ -105,8 +120,6 @@ exports.new = (async (req, res) => {
         let difference = Math.abs(req.body.score2 - req.body.score1);
 
         
-        
-
         //Add prediction to user document
         const savePrediction = await Users.updateOne(
         { "username": username },
@@ -140,12 +153,9 @@ exports.newSpecial = (async (req, res) => {
     const username = res.locals.decodedToken.username;
 
     const predictionsSchema = new mongo.Schema({
-        _id: mongo.Schema.ObjectId,
-        end_date: Date,
-        prediction: String,
-        tournament_id: mongo.Schema.ObjectId,
-        result: String,
-        user_prediction: String
+        prediction_id: mongo.Schema.ObjectId,
+        user_prediction: String,
+        user_points: Number,
     })
 
     const tournamentsSchema = new mongo.Schema({
@@ -166,7 +176,7 @@ exports.newSpecial = (async (req, res) => {
             },
             { "arrayFilters": [
                 { "tournament.tournament_id": mongo.Types.ObjectId(prediction.tournament_id) },
-                { "special._id": mongo.Types.ObjectId(prediction._id) }
+                { "special.prediction_id": mongo.Types.ObjectId(prediction.prediction_id) }
         ]})
     } catch(error) {
         console.log(error);
@@ -174,7 +184,8 @@ exports.newSpecial = (async (req, res) => {
     }
 
     res.status(200).json({
-        msg: "Prediction saved"
+        msg: "Prediction saved",
+        code: 200
     })
 })
 

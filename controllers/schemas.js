@@ -1,5 +1,20 @@
 const mongo = require("mongoose");
 
+
+
+
+const tournamentSchema = new mongo.Schema({
+    _id         : 'ObjectID',
+    name        : 'String',
+    start_date  : 'Date',
+    end_date    : 'Date',
+    img_url     : 'String',
+    host        : 'Array',
+    num_games   : 'Number',
+    sport       : 'String'
+})
+exports.tournament = tournamentSchema;
+
 const gameSchema = new mongo.Schema({
     team1           : 'string',
     team2           : 'string',
@@ -47,11 +62,11 @@ const tournamentUnderUserSchema = {
 
 
 const userSchema = new mongo.Schema({
+    _id         : 'ObjectID',
     username    : 'string',
     password    : 'string',
     rooms       : 'array',
     tournaments : [tournamentUnderUserSchema],
-    is_admin    : 'boolean',
-    _id         :'ObjectId'
+    is_admin    : 'boolean'
 });
 exports.user = userSchema;

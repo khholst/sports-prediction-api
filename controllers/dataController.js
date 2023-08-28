@@ -3,10 +3,10 @@ const schema = require("./schemas")
 
 
 exports.tournaments = async (req, res) => {
-    const tours = db.model('Tournaments', new mongo.Schema({ name: 'string', _id:'ObjectId', end_date: 'date' }), 'tournaments');
-    
+    const tournamentCollection = db.model.tournaments || db.model('tournaments', schema.tournament)
+
     try {
-        const tournaments = await tours.find(req.query)
+        const tournaments = await tournamentCollection.find(req.query)
         res.json(tournaments)
     } catch (error) {
         console.log(error)

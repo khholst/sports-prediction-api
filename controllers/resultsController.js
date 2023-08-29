@@ -48,6 +48,7 @@ exports.save = (async (req, res) => {
             }
         );
 
+
         // Update user predictions with score
         let winner = 0;
         if (result.score1 > result.score2) { winner = 1 }
@@ -59,8 +60,8 @@ exports.save = (async (req, res) => {
             const withinFivePointsTeam1 = createPointRangeArray(result.score1, 5, 0);
             const withinFivePointsTeam2 = createPointRangeArray(result.score2, 5, 0)
             
-            const withinTenPointsTeam1 = createPointRangeArray(result.score1, 10, 5);
-            const withinTenPointsTeam2 = createPointRangeArray(result.score2, 10, 5);
+            const withinTenPointsTeam1 = createPointRangeArray(result.score1, 10, 0);
+            const withinTenPointsTeam2 = createPointRangeArray(result.score2, 10, 0);
 
 
             const savePredictionPoints = await userCollection.bulkWrite([
@@ -90,7 +91,7 @@ exports.save = (async (req, res) => {
                         {   "prediction.game_id": mongo.Types.ObjectId(result._id),
                             "prediction.winner": winner,
 
-                        }                                                           
+                        }                                               
                     ]
                 }},
 

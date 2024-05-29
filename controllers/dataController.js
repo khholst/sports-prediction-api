@@ -6,8 +6,8 @@ exports.tournaments = async (req, res) => {
     const tournamentCollection = db.model.tournaments || db.model('tournaments', schema.tournament)
 
     try {
-        const tournaments = await tournamentCollection.find(req.query)
-        res.json(tournaments)
+        const tournaments = await tournamentCollection.find({}).sort({"end_date": "desc"})
+        res.status(200).json(tournaments)
     } catch (error) {
         console.log(error)
     }
@@ -32,8 +32,8 @@ exports.specials = async (req, res) => {
         const specialCollection = db.model.specials || db.model('specials', schema.specialPrediction)
         const specials = await specialCollection.find({tournament_id: tournament_id})
 
-        res.status(201).json({
-            code: 201,
+        res.status(200).json({
+            code: 200,
             specials: specials,
         });
 
@@ -51,10 +51,10 @@ exports.specials = async (req, res) => {
 
 
 exports.countries = async(req, res) => {
-    let counts = db.model('Countries', 
+    let countries = db.model('Countries', 
         new mongo.Schema({ country_id: 'string', name: 'string',  _id:'ObjectId' }), 'countries'); 
 
-    counts.find({}, function(err, data) { 
+    countries.find({}, function(err, data) { 
         if(err){console.log(err);}
         else{
             res.json(data);}; 

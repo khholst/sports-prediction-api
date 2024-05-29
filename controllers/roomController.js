@@ -10,8 +10,6 @@ const tournamentSchema = {_id: 'ObjectId', start_date: 'string', end_date: 'stri
 const roomSchema = { _id: 'ObjectId', name: 'string', tournament_id: 'objectId', creator: 'string', join_key: 'string'};
 
 
-
-
 async function addPredictionForUsers(userCollection, prediction, tournament_id, special=false) {
     let subdocument = "predictions";
     if (special) { subdocument = "special_predictions" }

@@ -54,7 +54,7 @@ exports.all = (async(req, res) => {
         const userPredictions = await User.findOne({username: username}, {username: 0, password: 0, is_admin: 0, _id: 0, rooms: 0, __v: 0})
                               .populate("tournaments.predictions.game_id", "-tournament_id")
                               .populate("tournaments.special_predictions.prediction_id")
-                              .populate("tournaments.tournament_id", "-end_date -img_url -sport");
+                              .populate("tournaments.tournament_id", "-end_date -img_url -sport")
 
         res.status(200).json({
             predictions: userPredictions.tournaments

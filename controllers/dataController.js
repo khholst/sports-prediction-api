@@ -4,9 +4,8 @@ const schema = require("./schemas")
 
 exports.tournaments = async (req, res) => {
     const tournamentCollection = db.model.tournaments || db.model('tournaments', schema.tournament)
-
     try {
-        const tournaments = await tournamentCollection.find({}).sort({"end_date": "desc"})
+        const tournaments = await tournamentCollection.find(req.query).sort({"end_date": "desc"})
         res.status(200).json(tournaments)
     } catch (error) {
         console.log(error)

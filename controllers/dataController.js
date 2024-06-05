@@ -17,7 +17,7 @@ exports.games = async(req, res) => {
     const games = db.model('Games',
         new mongo.Schema({team1: 'string', team2: 'string', score1: 'number', score2: 'number', 
             time: 'date', tournament_id: 'ObjectID',  _id:'ObjectID'}), 'games');
-
+    
     games.find(req.query,function(err, data) {
         if(err){console.log(err);}
         else{res.json(data);};

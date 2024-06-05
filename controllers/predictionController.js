@@ -204,12 +204,13 @@ exports.friendsPredictions = (async (req, res) => {
         points: Number
     })
     const specialPredictionsSchema = new mongo.Schema({
-        _id: mongo.Schema.ObjectId,
+        prediction_id: mongo.Schema.ObjectId,
         end_date: Date,
         prediction: String,
         tournament_id: mongo.Schema.ObjectId,
         result: String,
-        user_prediction: String
+        user_prediction: String,
+        user_points: Number
     })
 
     const tournamentsSchema = new mongo.Schema({
@@ -226,11 +227,12 @@ exports.friendsPredictions = (async (req, res) => {
 
     try {
         const userRooms = await User.findOne({"username": username}, {rooms: 1});
-        const friends = await User.find({ "username": {"$ne" : username}, "rooms": { "$elemMatch": { "$in": userRooms.rooms }}}, {username: 1, tournaments: 1});
+        const friends = await User.find({"rooms": { "$elemMatch": { "$in": userRooms.rooms }}}, {username: 1, tournaments: 1});
 
         let predictionsKey = "";
         let idField = "";
-        if (prediction.type === "special") { predictionsKey = "special_predictions"; idField = "_id"; }
+
+        if (prediction.type === "special") { predictionsKey = "special_predictions"; idField = "prediction_id"; }
         else if (prediction.type === "game") { predictionsKey = "predictions"; idField="game_id"; }
         let friendsPredictions = [];
 
@@ -239,10 +241,11 @@ exports.friendsPredictions = (async (req, res) => {
                 if (mongo.Types.ObjectId(friends[i].tournaments[j].tournament_id).equals(mongo.Types.ObjectId(prediction.tournament_id))) {
                     for (let k = 0; k < friends[i].tournaments[j][predictionsKey].length; k++) {
                         if (mongo.Types.ObjectId(friends[i].tournaments[j][predictionsKey][k][idField]).equals(mongo.Types.ObjectId(prediction.prediction_id))) {
-                            const predictionEntry = friends[i].tournaments[j][predictionsKey][k];
+                            const predictionEntry = friends[i].tournaments[j][predictionsKey][k]; 
                             if (prediction.type === "special") {
                                 if (predictionEntry.user_prediction != "None") {
-                                    friendsPredictions.push({username: friends[i].username, prediction: predictionEntry.user_prediction})
+                                    console.log(predictionEntry)
+                                    friendsPredictions.push({username: friends[i].username, prediction: predictionEntry.user_prediction, points: predictionEntry.user_points})
                                 }
                             } else if (prediction.type === "game") {
                                 if (predictionEntry.score1 >= 0) {
